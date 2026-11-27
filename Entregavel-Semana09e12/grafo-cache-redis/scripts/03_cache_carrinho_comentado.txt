@@ -1,0 +1,55 @@
+# ============================================================
+# CACHE DO CARRINHO - Redis (executar: redis-cli < scripts/03_cache_carrinho.redis)
+# ============================================================
+
+# ---------- PARTE 1: Key Design ----------
+# Padrão da chave : cart:user:{id_usuario}     -> usuário logado
+#                   cart:session:{id_sessao}   -> visitante anônimo
+# Estrutura       : HASH (campo = product:{id_produto}, valor = quantidade)
+# Por que Hash    : atualizar a quantidade de um item sem reescrever o carrinho inteiro
+#                   (diferente de um JSON gigante em String).
+# TTL             : 86400 s (24 h) para carrinho abandonado.
+
+# Limpa apenas as chaves deste exercício
+DEL cart:user:1 cart:session:abc123
+
+# ---------- PARTE 2: adicionar itens ao carrinho ----------
+HSET cart:user:1 product:2 1
+HSET cart:user:1 product:3 2
+HSET cart:user:1 product:5 1
+
+# Aumentar a quantidade de forma atômica (+1 no product:2)
+HINCRBY cart:user:1 product:2 1
+
+# Remover um item
+HDEL cart:user:1 product:5
+
+# ---------- PARTE 2: ler o carrinho completo ----------
+HGETALL cart:user:1
+HLEN cart:user:1
+HGET cart:user:1 product:2
+
+# ---------- PARTE 2: TTL (simula abandono do carrinho) ----------
+EXPIRE cart:user:1 86400
+TTL cart:user:1
+
+# Demonstração rápida da expiração (5 s) com outro carrinho
+HSET cart:session:abc123 product:4 1
+EXPIRE cart:session:abc123 5
+TTL cart:session:abc123
+# Aguarde 6 segundos e rode:  EXISTS cart:session:abc123   -> (integer) 0
+
+# Boa prática: renovar o TTL a cada interação do usuário com o carrinho
+HINCRBY cart:user:1 product:3 1
+EXPIRE cart:user:1 86400
+
+# ---------- PARTE 3 (Bônus): invalidação no checkout ----------
+# Estratégia: depois que o pedido for confirmado e gravado no banco principal
+# (fonte da verdade), a chave do carrinho é removida para que itens já
+# comprados não reapareçam.
+#   1) gravar o pedido no banco principal
+#   2) remover o carrinho do cache
+DEL cart:user:1
+# Alternativa não bloqueante para carrinhos grandes:
+# UNLINK cart:user:1
+EXISTS cart:user:1

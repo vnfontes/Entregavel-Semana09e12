@@ -1,0 +1,18 @@
+DEL cart:user:1 cart:session:abc123
+HSET cart:user:1 product:2 1
+HSET cart:user:1 product:3 2
+HSET cart:user:1 product:5 1
+HINCRBY cart:user:1 product:2 1
+HDEL cart:user:1 product:5
+HGETALL cart:user:1
+HLEN cart:user:1
+HGET cart:user:1 product:2
+EXPIRE cart:user:1 86400
+TTL cart:user:1
+HSET cart:session:abc123 product:4 1
+EXPIRE cart:session:abc123 5
+TTL cart:session:abc123
+HINCRBY cart:user:1 product:3 1
+EXPIRE cart:user:1 86400
+DEL cart:user:1
+EXISTS cart:user:1
